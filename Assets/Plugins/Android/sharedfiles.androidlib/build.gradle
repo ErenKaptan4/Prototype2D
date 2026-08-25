@@ -1,10 +1,17 @@
-apply plugin: 'com.android.library';
+apply plugin: 'com.android.library'
 
 android {
-    namespace 'com.yourcompany.sharedfiles';
-    compileSdkVersion 34;
+    namespace 'com.yourcompany.sharedfiles'
+    compileSdkVersion 34
 
     defaultConfig {
-        minSdkVersion 22;
+        minSdkVersion 22
+    }
+
+    sourceSets {
+        main {
+            manifest.srcFile 'AndroidManifest.xml'
+            res.srcDirs = ['res']
+        }
     }
 }
