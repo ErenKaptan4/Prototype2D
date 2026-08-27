@@ -145,7 +145,8 @@ public class TopDownTapToPlace : MonoBehaviour
 
             if (GetGroundPoint(screenPos, out Vector3 groundPoint))
             {
-                GameObject newObject = Instantiate(selectedPrefab, groundPoint, Quaternion.identity);
+                Vector3 spawnPosition = new Vector3(groundPoint.x, groundPoint.y + selectedPrefab.transform.position.y, groundPoint.z);
+                GameObject newObject = Instantiate(selectedPrefab, spawnPosition, selectedPrefab.transform.rotation);
                 placedObjects.Add(newObject);
                 if (logger != null) logger.RegisterPlacement(newObject, selectedPrefab.name);
                 SelectObjectInScene(newObject);
