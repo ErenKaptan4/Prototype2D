@@ -12,6 +12,9 @@ using UnityEngine.InputSystem;
 // Works with mouse (editor testing) and touch (on device) via the Input System's Pointer.
 public class TopDownTapToPlace : MonoBehaviour
 {
+    [SerializeField] private float pinchScaleSensitivity = 0.005f;
+    private float previousPinchDistance = -1f;
+
     [SerializeField] private GameObject selectedPrefab;
     [SerializeField] private GameObject selectionRingPrefab;
     [SerializeField] private PlacementLogger logger;
@@ -31,6 +34,39 @@ public class TopDownTapToPlace : MonoBehaviour
 
     // Called by your palette buttons, same as in the AR scene.
     public void SelectObject(GameObject prefab) { selectedPrefab = prefab; }
+    private bool HandlePinchToScale()
+    {
+        if (Touchscreen.current == null || selectedPlacedObject == null) return false;
+
+        var touches = Touchscreen.current.touches;
+        int activeCount = 0;
+        Vector2 pos0 = Vector2.zero, pos1 = Vector2.zero;
+
+        foreach (var touch in touches)
+        {
+            if (touch.press.isPressed)
+            {
+                if (activeCount == 0) pos0 = touch.position.ReadValue();
+                else if (activeCount == 1) pos1 = touch.position.ReadValue();
+                activeCount++;
+            }
+        }
+
+        if (activeCount >= 2)
+        {
+            float currentDistance = Vector2.Distance(pos0, pos1);
+            if (previousPinchDistance > 0f)
+            {
+                float delta = currentDistance - previousPinchDistance;
+                ApplyScale(1f + (delta * pinchScaleSensitivity));
+            }
+            previousPinchDistance = currentDistance;
+            return true;
+        }
+
+        previousPinchDistance = -1f;
+        return false;
+    }
 
     public void ResetPlacedObjects()
     {
@@ -117,6 +153,9 @@ public class TopDownTapToPlace : MonoBehaviour
     private void Update()
     {
         if (Pointer.current == null || topDownCamera == null) return;
+
+        if (HandlePinchToScale())
+            return;
 
         Vector2 screenPos = Pointer.current.position.ReadValue();
 
