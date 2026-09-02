@@ -27,6 +27,7 @@ public class TopDownTapToPlace : MonoBehaviour
     [SerializeField] private float scaleStep = 0.1f; // change per Bigger/Smaller press
 
     private readonly List<GameObject> placedObjects = new List<GameObject>();
+    private readonly Dictionary<GameObject, float> baseScales = new Dictionary<GameObject, float>();
     private GameObject selectedPlacedObject;
     private SelectableObject selectedObject;
 
@@ -76,6 +77,7 @@ public class TopDownTapToPlace : MonoBehaviour
         if (logger != null) logger.UnregisterAll();
 
         placedObjects.Clear();
+        baseScales.Clear();
         selectedPlacedObject = null;
         selectedObject = null;
     }
@@ -86,6 +88,7 @@ public class TopDownTapToPlace : MonoBehaviour
         {
             if (logger != null) logger.UnregisterPlacement(selectedPlacedObject);
             placedObjects.Remove(selectedPlacedObject);
+            baseScales.Remove(selectedPlacedObject);
             Destroy(selectedPlacedObject);
             selectedPlacedObject = null;
             selectedObject = null;
@@ -96,7 +99,7 @@ public class TopDownTapToPlace : MonoBehaviour
     {
         if (selectedPlacedObject != null)
         {
-            selectedPlacedObject.transform.Rotate(0f, -15f, 0f);
+            selectedPlacedObject.transform.Rotate(Vector3.up, -15f, Space.World);
             if (logger != null) logger.CountAdjustment();
         }
     }
@@ -105,19 +108,28 @@ public class TopDownTapToPlace : MonoBehaviour
     {
         if (selectedPlacedObject != null)
         {
-            selectedPlacedObject.transform.Rotate(0f, 15f, 0f);
+            selectedPlacedObject.transform.Rotate(Vector3.up, 15f, Space.World);
             if (logger != null) logger.CountAdjustment();
         }
     }
 
     // Wire "Bigger" / "Smaller" buttons to these (AR uses pinch; buttons keep 2D simple).
-    public void ScaleSelectedUp()   { ApplyScale(1f + scaleStep); }
+    public void ScaleSelectedUp() { ApplyScale(1f + scaleStep); }
     public void ScaleSelectedDown() { ApplyScale(1f - scaleStep); }
 
     private void ApplyScale(float factor)
     {
         if (selectedPlacedObject == null) return;
-        float s = Mathf.Clamp(selectedPlacedObject.transform.localScale.x * factor, minScale, maxScale);
+        if (!baseScales.TryGetValue(selectedPlacedObject, out float baseScale))
+        {
+            baseScale = selectedPlacedObject.transform.localScale.x;
+            baseScales[selectedPlacedObject] = baseScale;
+        }
+
+        float currentMultiplier = selectedPlacedObject.transform.localScale.x / baseScale;
+        float newMultiplier = Mathf.Clamp(currentMultiplier * factor, minScale, maxScale);
+        float s = baseScale * newMultiplier;
+
         selectedPlacedObject.transform.localScale = new Vector3(s, s, s);
         if (logger != null) logger.CountAdjustment();
     }
@@ -187,6 +199,7 @@ public class TopDownTapToPlace : MonoBehaviour
                 Vector3 spawnPosition = new Vector3(groundPoint.x, groundPoint.y + selectedPrefab.transform.position.y, groundPoint.z);
                 GameObject newObject = Instantiate(selectedPrefab, spawnPosition, selectedPrefab.transform.rotation);
                 placedObjects.Add(newObject);
+                baseScales[newObject] = newObject.transform.localScale.x;
                 if (logger != null) logger.RegisterPlacement(newObject, selectedPrefab.name);
                 SelectObjectInScene(newObject);
                 isDragging = false;
